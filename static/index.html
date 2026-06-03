@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma AI Assistant</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <!-- Marked.js for Markdown Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Ambient Background Lights -->
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+
+        <!-- Warning Alert Banner for Config API -->
+        <div id="config-warning" class="warning-banner hidden">
+            <i data-lucide="alert-triangle"></i>
+            <span><strong>Cảnh báo:</strong> Chưa cấu hình `OPENROUTER_API_KEY` trong tệp `.env`. Vui lòng thêm key để bắt đầu trò chuyện.</span>
+        </div>
+
+        <!-- Main Layout -->
+        <main class="glass-panel main-layout">
+            <!-- Sidebar / Settings -->
+            <aside class="sidebar">
+                <div class="brand">
+                    <div class="brand-logo">
+                        <i data-lucide="sparkles" class="pulse-icon"></i>
+                    </div>
+                    <div>
+                        <h2>Gemma API</h2>
+                        <span class="subtext">Uvicorn Backend</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <label class="section-title"><i data-lucide="cpu"></i> Cấu hình mô hình</label>
+                    <div class="custom-select-wrapper" style="margin-bottom: 8px;">
+                        <select id="model-select" class="custom-select">
+                            <option value="google/gemma-4-31b-it" selected>Gemma 4 31B IT</option>
+                            <option value="google/gemma-2-9b-it">Gemma 2 9B IT</option>
+                            <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                            <option value="deepseek/deepseek-chat">DeepSeek Chat (V3)</option>
+                            <option value="custom">Nhập mô hình tùy chọn...</option>
+                        </select>
+                    </div>
+                    <div id="custom-model-wrapper" class="hidden">
+                        <input type="text" id="custom-model-input" class="custom-select" placeholder="Ví dụ: openai/gpt-4o" style="margin-top: 8px;">
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <label class="section-title"><i data-lucide="info"></i> Hướng dẫn</label>
+                    <div class="info-card">
+                        <p>Ứng dụng này kết nối trực tiếp với <strong>Gemma LLM</strong> qua OpenRouter thông qua API được phát triển bằng <strong>FastAPI</strong> & <strong>Uvicorn</strong>.</p>
+                        <p>Hỗ trợ phản hồi <strong>Streaming</strong> thời gian thực cùng định dạng Markdown đầy đủ.</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-footer">
+                    <button id="clear-chat-btn" class="btn btn-secondary">
+                        <i data-lucide="trash-2"></i> Xóa lịch sử chat
+                    </button>
+                    <div class="status-indicator">
+                        <span class="status-dot online"></span>
+                        <span class="status-text">Server: Sẵn sàng</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Chat Area -->
+            <section class="chat-area">
+                <header class="chat-header">
+                    <div class="header-info">
+                        <h3 id="current-model-display">Gemma 4 31B IT</h3>
+                        <span class="status-pill"><span class="pulse-dot"></span>Đang hoạt động</span>
+                    </div>
+                </header>
+
+                <!-- Messages Container -->
+                <div id="messages-container" class="messages-container">
+                    <!-- Welcome Message -->
+                    <div class="message assistant welcome-message">
+                        <div class="avatar">
+                            <i data-lucide="bot"></i>
+                        </div>
+                        <div class="message-content">
+                            <h4>Xin chào! 👋</h4>
+                            <p>Tôi là trợ lý AI tích hợp mô hình Gemma 4 của Google qua OpenRouter. Tôi có thể giúp gì cho bạn hôm nay?</p>
+                            <div class="suggestion-chips">
+                                <button class="chip" onclick="useSuggestion('Giải thích thuật toán Quicksort bằng Python')">Giải thích Quicksort</button>
+                                <button class="chip" onclick="useSuggestion('Viết một email xin nghỉ ốm chuyên nghiệp bằng tiếng Anh')">Viết email xin nghỉ</button>
+                                <button class="chip" onclick="useSuggestion('Làm sao để tối ưu hóa hiệu năng API FastAPI?')">Tối ưu FastAPI API</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Panel -->
+                <footer class="input-panel">
+                    <form id="chat-form" class="chat-form">
+                        <textarea 
+                            id="user-input" 
+                            placeholder="Nhập câu hỏi của bạn tại đây... (Ctrl+Enter để gửi)" 
+                            rows="1" 
+                            required
+                        ></textarea>
+                        <button type="submit" id="send-btn" class="btn btn-primary" title="Gửi tin nhắn">
+                            <i data-lucide="send"></i>
+                        </button>
+                    </form>
+                    <div class="input-footer">
+                        <span>Nhấn Enter để gửi, Shift+Enter xuống dòng. Kết nối an toàn đến OpenRouter API.</span>
+                    </div>
+                </footer>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

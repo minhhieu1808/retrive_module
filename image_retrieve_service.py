@@ -341,7 +341,7 @@ class ImageRetrieveService:
             return []
 
     def search_images(self, query_text: str, index_name: str, top_k: int = 6) -> List[Dict[str, Any]]:
-        """Search images using a text query."""
+        """Search images using a text query with hybrid keyword boosting based on descriptions."""
         try:
             collections = self.qdrant_client.get_collections()
             exists = any(c.name == index_name for c in collections.collections)
@@ -358,7 +358,46 @@ class ImageRetrieveService:
             print("ImageRetrieveService: Failed to generate embedding for query.")
             return []
             
-        return self._search_by_vector(embeddings[0], index_name, top_k)
+        # Retrieve more candidates from vector search to allow boosting to work effectively
+        candidate_k = max(top_k * 2, 20)
+        results = self._search_by_vector(embeddings[0], index_name, candidate_k)
+        
+        # Define context-specific stopwords to ignore during description keyword matching
+        CONTEXT_STOPWORDS = {
+            "bục", "trưng", "bày", "màu", "hình", "ảnh", "3d", "sản", "phẩm", 
+            "phông", "nền", "phong", "cách", "thiết", "kế", "cảnh", "khung", 
+            "tông", "bộ", "sưu", "tập", "đặt", "trên", "những", "các", "có", "một",
+            "với", "cho", "và", "ở", "trong", "được", "là"
+        }
+        
+        # Clean query text and split into words
+        raw_words = [w.strip().lower() for w in query_text.replace(",", " ").replace(".", " ").split() if len(w.strip()) > 1]
+        info_words = [w for w in raw_words if w not in CONTEXT_STOPWORDS]
+        
+        # Fallback to raw words if no informative words are left (e.g. searching generic words)
+        target_words = info_words if info_words else raw_words
+        
+        boosted_results = []
+        for res in results:
+            desc = res.get("description", "").lower()
+            match_count = 0
+            if target_words:
+                for qw in target_words:
+                    if qw in desc:
+                        match_count += 1
+                # Apply boost: up to 0.3 if all query keywords are present in description
+                boost = 0.3 * (match_count / len(target_words))
+            else:
+                boost = 0.0
+                
+            res["score"] = res["score"] + boost
+            res["percentage"] = min(100.0, round(((res["score"] + 1.0) / 2.0) * 100.0, 2))
+            boosted_results.append(res)
+            
+        # Re-sort and slice to top_k
+        boosted_results.sort(key=lambda x: x["score"], reverse=True)
+        return boosted_results[:top_k]
+
 
     def search_images_by_image(self, image_base64: str, index_name: str, top_k: int = 6) -> List[Dict[str, Any]]:
         """Search images using an uploaded query image."""

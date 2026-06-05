@@ -288,3 +288,465 @@ userInput.addEventListener('keydown', (e) => {
 // Initialize configuration check on load
 checkConfig();
 updateModelDisplay();
+
+// --- Navigation Tab Switching Logic ---
+const tabChatBtn = document.getElementById('tab-chat-btn');
+const tabImageBtn = document.getElementById('tab-image-btn');
+const chatArea = document.getElementById('chat-area');
+const imageArea = document.getElementById('image-area');
+
+if (tabChatBtn && tabImageBtn && chatArea && imageArea) {
+    tabChatBtn.addEventListener('click', () => {
+        tabChatBtn.classList.add('active');
+        tabImageBtn.classList.remove('active');
+        chatArea.classList.remove('hidden');
+        imageArea.classList.add('hidden');
+    });
+
+    tabImageBtn.addEventListener('click', () => {
+        tabImageBtn.classList.add('active');
+        tabChatBtn.classList.remove('active');
+        imageArea.classList.remove('hidden');
+        chatArea.classList.add('hidden');
+        lucide.createIcons();
+    });
+}
+
+// --- Image Retrieval / Search Logic ---
+const indexImagesBtn = document.getElementById('index-images-btn');
+const indexingStatus = document.getElementById('indexing-status');
+const indexingStatusText = document.getElementById('indexing-status-text');
+const resultsCount = document.getElementById('results-count');
+const imageResultsGrid = document.getElementById('image-results-grid');
+
+// Tab selectors
+const modeTextBtn = document.getElementById('mode-text-btn');
+const modeImageBtn = document.getElementById('mode-image-btn');
+const searchTextContainer = document.getElementById('search-text-container');
+const searchImageContainer = document.getElementById('search-image-container');
+
+// Text search
+const imageTextSearchForm = document.getElementById('image-text-search-form');
+const imageQueryTextInput = document.getElementById('image-query-text-input');
+
+// Image upload/dropzone search
+const imageDropzone = document.getElementById('image-dropzone');
+const imageFileDropzoneInput = document.getElementById('image-file-dropzone-input');
+const dropPreviewPane = document.getElementById('drop-preview-pane');
+const dropPreviewImg = document.getElementById('drop-preview-img');
+const dropPreviewName = document.getElementById('drop-preview-name');
+const dropPreviewSize = document.getElementById('drop-preview-size');
+const dropClearBtn = document.getElementById('drop-clear-btn');
+const dropSearchBtn = document.getElementById('drop-search-btn');
+
+// Stats Elements
+const statsTotalImages = document.getElementById('stats-total-images');
+const statsVectorDim = document.getElementById('stats-vector-dim');
+const statsDbType = document.getElementById('stats-db-type');
+
+// Lightbox Modal Elements
+const lightboxModal = document.getElementById('lightbox-modal');
+const lightboxBackdrop = document.getElementById('lightbox-backdrop');
+const lightboxCloseBtn = document.getElementById('lightbox-close-btn');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxTitle = document.getElementById('lightbox-title');
+const lightboxBadgeMatch = document.getElementById('lightbox-badge-match');
+const lightboxSimilarityBar = document.getElementById('lightbox-similarity-bar');
+const lightboxSimilarityPercent = document.getElementById('lightbox-similarity-percent');
+const lightboxDescription = document.getElementById('lightbox-description');
+const lightboxPathInput = document.getElementById('lightbox-path-input');
+const lightboxTimestamp = document.getElementById('lightbox-timestamp');
+const copyPathBtn = document.getElementById('copy-path-btn');
+
+// Current query states
+let uploadedImageBase64 = null;
+let currentSearchResults = [];
+
+// Helper to format file sizes
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// 1. Fetch Database Statistics
+async function fetchImageStats() {
+    try {
+        const response = await fetch('/api/images/stats');
+        if (response.ok) {
+            const stats = await response.json();
+            if (stats.exists) {
+                statsTotalImages.textContent = stats.points_count.toLocaleString();
+                statsVectorDim.textContent = stats.vector_size ? stats.vector_size : 'Không xác định';
+                statsDbType.textContent = 'Qdrant DB';
+            } else {
+                statsTotalImages.textContent = '0';
+                statsVectorDim.textContent = 'Chưa tạo';
+            }
+        }
+    } catch (err) {
+        console.error('Error fetching database stats:', err);
+    }
+}
+
+// Fetch stats when tab switches to image-search
+if (tabImageBtn) {
+    tabImageBtn.addEventListener('click', () => {
+        fetchImageStats();
+    });
+}
+
+// 2. Tab selection logic for Search Modes
+if (modeTextBtn && modeImageBtn) {
+    modeTextBtn.addEventListener('click', () => {
+        modeTextBtn.classList.add('active');
+        modeImageBtn.classList.remove('active');
+        searchTextContainer.classList.remove('hidden');
+        searchImageContainer.classList.add('hidden');
+    });
+
+    modeImageBtn.addEventListener('click', () => {
+        modeImageBtn.classList.add('active');
+        modeTextBtn.classList.remove('active');
+        searchImageContainer.classList.remove('hidden');
+        searchTextContainer.classList.add('hidden');
+        lucide.createIcons();
+    });
+}
+
+// Helper chip functions
+window.useImageSuggestion = function(text) {
+    if (imageQueryTextInput) {
+        imageQueryTextInput.value = text;
+        if (imageTextSearchForm) {
+            // Trigger submit event
+            imageTextSearchForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    }
+};
+
+// 3. Dropzone & File Upload Logic
+if (imageDropzone && imageFileDropzoneInput) {
+    // Click dropzone to trigger browser file upload
+    imageDropzone.addEventListener('click', () => {
+        imageFileDropzoneInput.click();
+    });
+
+    // Handle file drag events
+    ['dragenter', 'dragover'].forEach(eventName => {
+        imageDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            imageDropzone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        imageDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            imageDropzone.classList.remove('dragover');
+        }, false);
+    });
+
+    // Drop file handler
+    imageDropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            handleUploadedFile(files[0]);
+        }
+    });
+
+    // Selected file handler
+    imageFileDropzoneInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length > 0) {
+            handleUploadedFile(files[0]);
+        }
+    });
+}
+
+// Process and display upload preview
+function handleUploadedFile(file) {
+    if (!file.type.startsWith('image/')) {
+        alert('Vui lòng chỉ tải lên tệp tin định dạng hình ảnh.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        uploadedImageBase64 = event.target.result;
+        dropPreviewImg.src = uploadedImageBase64;
+        dropPreviewName.textContent = file.name;
+        dropPreviewSize.textContent = formatBytes(file.size);
+        
+        imageDropzone.classList.add('hidden');
+        dropPreviewPane.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
+// Clear upload file
+if (dropClearBtn) {
+    dropClearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        uploadedImageBase64 = null;
+        imageFileDropzoneInput.value = '';
+        dropPreviewPane.classList.add('hidden');
+        imageDropzone.classList.remove('hidden');
+        dropPreviewImg.src = '';
+    });
+}
+
+// 4. Submit Search Handlers
+// Text to Image Search Form
+if (imageTextSearchForm) {
+    imageTextSearchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const query = imageQueryTextInput.value.trim();
+        if (!query) return;
+        executeImageSearch(query, null);
+    });
+}
+
+// Image to Image Search trigger
+if (dropSearchBtn) {
+    dropSearchBtn.addEventListener('click', () => {
+        if (!uploadedImageBase64) return;
+        executeImageSearch(null, uploadedImageBase64);
+    });
+}
+
+// Core execution method
+async function executeImageSearch(queryText, imageBase64) {
+    resultsCount.textContent = 'Đang tìm kiếm...';
+    imageResultsGrid.innerHTML = `
+        <div class="grid-placeholder">
+            <div class="spinner" style="width: 32px; height: 32px; margin-bottom: 16px;"></div>
+            <p>Đang tìm kiếm hình ảnh phù hợp trong Qdrant Vector DB...</p>
+        </div>
+    `;
+
+    try {
+        let response;
+        if (imageBase64) {
+            response = await fetch('/api/images/search-by-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageBase64, limit: 6 })
+            });
+        } else {
+            response = await fetch(`/api/images/search?query=${encodeURIComponent(queryText)}`);
+        }
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(errText || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        currentSearchResults = data.results || [];
+        
+        resultsCount.textContent = `Tìm thấy ${currentSearchResults.length} hình ảnh`;
+
+        if (currentSearchResults.length === 0) {
+            imageResultsGrid.innerHTML = `
+                <div class="grid-placeholder">
+                    <i data-lucide="image-off"></i>
+                    <p>Không tìm thấy hình ảnh phù hợp. Vui lòng thử từ khóa mô tả hoặc hình ảnh truy vấn khác.</p>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        // Render card grids
+        imageResultsGrid.innerHTML = currentSearchResults.map((img, idx) => `
+            <div class="image-card" style="animation: slide-up 0.3s ease forwards;">
+                <div class="image-card-img-wrapper" onclick="openLightboxByIndex(${idx})">
+                    <img src="/image/${img.file_name}" alt="${img.file_name}" onerror="this.src='/static/placeholder.svg'; this.onerror=null;">
+                    <span class="similarity-badge">
+                        <i data-lucide="zap"></i> Match ${img.percentage}%
+                    </span>
+                </div>
+                <div class="image-card-info">
+                    <div class="image-card-title" title="${img.file_name}" onclick="openLightboxByIndex(${idx})">${img.file_name}</div>
+                    
+                    <div class="similarity-bar-container">
+                        <div class="similarity-bar-label">
+                            <span>Độ tương đồng</span>
+                            <span>${img.percentage}%</span>
+                        </div>
+                        <div class="similarity-bar-bg">
+                            <div class="similarity-bar-fill" id="similarity-bar-fill-${idx}" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="image-card-description" title="${img.description || ''}">
+                        ${img.description || 'Không có mô tả chi tiết từ AI.'}
+                    </div>
+                    
+                    <button class="image-card-btn-view" onclick="openLightboxByIndex(${idx})">
+                        <i data-lucide="info"></i> Xem chi tiết
+                    </button>
+                    
+                    <div class="image-card-meta">
+                        <i data-lucide="folder"></i>
+                        <span title="${img.file_path}">${img.file_name}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Progress bar fill animation
+        setTimeout(() => {
+            currentSearchResults.forEach((img, idx) => {
+                const fill = document.getElementById(`similarity-bar-fill-${idx}`);
+                if (fill) fill.style.width = `${img.percentage}%`;
+            });
+        }, 50);
+
+        lucide.createIcons();
+
+    } catch (err) {
+        console.error('Image search error:', err);
+        resultsCount.textContent = 'Lỗi truy vấn';
+        imageResultsGrid.innerHTML = `
+            <div class="grid-placeholder">
+                <i data-lucide="alert-circle" style="color: var(--error-color);"></i>
+                <p style="color: var(--error-color);"><strong>Lỗi hệ thống:</strong> ${err.message || 'Không thể kết nối với server.'}</p>
+            </div>
+        `;
+        lucide.createIcons();
+    }
+}
+
+// 5. Index directory handler
+if (indexImagesBtn) {
+    indexImagesBtn.addEventListener('click', async () => {
+        indexImagesBtn.disabled = true;
+        indexingStatus.classList.remove('hidden');
+        indexingStatusText.textContent = 'Đang quét thư mục và sinh vector embeddings (Qwen-VL) lưu vào Qdrant...';
+
+        try {
+            const response = await fetch('/api/images/index', { method: 'POST' });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || `HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            const success = data.success_count || 0;
+            const total = data.total_processed || 0;
+            const fail = data.fail_count || 0;
+
+            indexingStatusText.textContent = `Lập chỉ mục hoàn tất! Đã xử lý ${total} ảnh (Thành công: ${success}, Thất bại: ${fail})`;
+            
+            // Refresh DB Stats
+            fetchImageStats();
+
+            // Render confirmation
+            if (success > 0) {
+                imageResultsGrid.innerHTML = `
+                    <div class="grid-placeholder">
+                        <i data-lucide="sparkles" style="color: var(--success-color);"></i>
+                        <p>Qdrant Vector Database đã được cập nhật với ${success} hình ảnh mới. Hãy bắt đầu tìm kiếm!</p>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        } catch (err) {
+            console.error('Indexing error:', err);
+            indexingStatusText.textContent = `Lỗi lập chỉ mục: ${err.message || 'Không thể kết nối với server.'}`;
+        } finally {
+            setTimeout(() => {
+                indexingStatus.classList.add('hidden');
+                indexImagesBtn.disabled = false;
+            }, 5000);
+        }
+    });
+}
+
+// 6. Lightbox Modal Event Handlers
+window.openLightboxByIndex = function(index) {
+    const img = currentSearchResults[index];
+    if (!img || !lightboxModal) return;
+
+    lightboxImg.src = `/image/${img.file_name}`;
+    lightboxTitle.textContent = img.file_name;
+    lightboxBadgeMatch.textContent = `Match ${img.percentage}%`;
+    lightboxSimilarityPercent.textContent = `${img.percentage}%`;
+    lightboxSimilarityBar.style.width = `0%`; // start animation from 0
+    lightboxDescription.textContent = img.description || 'Không có mô tả chi tiết từ AI cho hình ảnh này.';
+    lightboxPathInput.value = img.file_path || '';
+    
+    // Format timestamp nicely
+    if (img.timestamp) {
+        try {
+            const date = new Date(img.timestamp);
+            lightboxTimestamp.textContent = date.toLocaleString('vi-VN');
+        } catch (e) {
+            lightboxTimestamp.textContent = img.timestamp;
+        }
+    } else {
+        lightboxTimestamp.textContent = 'N/A';
+    }
+
+    lightboxModal.classList.remove('hidden');
+    lucide.createIcons();
+    
+    // Animate similarity bar inside lightbox
+    setTimeout(() => {
+        lightboxSimilarityBar.style.width = `${img.percentage}%`;
+    }, 100);
+};
+
+function closeLightbox() {
+    if (lightboxModal) {
+        lightboxModal.classList.add('hidden');
+    }
+}
+
+if (lightboxCloseBtn) {
+    lightboxCloseBtn.addEventListener('click', closeLightbox);
+}
+
+if (lightboxBackdrop) {
+    lightboxBackdrop.addEventListener('click', closeLightbox);
+}
+
+// Keyboard ESC to close lightbox
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeLightbox();
+    }
+});
+
+// Copy path logic
+if (copyPathBtn && lightboxPathInput) {
+    copyPathBtn.addEventListener('click', () => {
+        lightboxPathInput.select();
+        lightboxPathInput.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            navigator.clipboard.writeText(lightboxPathInput.value);
+            const originalHTML = copyPathBtn.innerHTML;
+            copyPathBtn.innerHTML = '<i data-lucide="check"></i> Đã chép';
+            copyPathBtn.classList.remove('btn-secondary');
+            copyPathBtn.classList.add('btn-primary');
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                copyPathBtn.innerHTML = originalHTML;
+                copyPathBtn.classList.remove('btn-primary');
+                copyPathBtn.classList.add('btn-secondary');
+                lucide.createIcons();
+            }, 2000);
+        } catch (err) {
+            console.error('Copy path failed:', err);
+            alert('Không thể tự động sao chép. Vui lòng nhấn Ctrl+C để sao chép thủ công.');
+        }
+    });
+}

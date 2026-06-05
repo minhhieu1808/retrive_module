@@ -6,4 +6,6 @@ elasticsearch>=8.0.0,<9.0.0
 fonttools>=4.0.0
 sentence-transformers
 torch
+pillow
+python-multipart>=0.0.18
 qdrant-client

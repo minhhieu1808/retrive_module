@@ -7,45 +7,43 @@ import httpx
 import numpy as np
 import urllib3
 from typing import Dict, Any, List, Optional
-from elasticsearch import Elasticsearch
+from qdrant_client import QdrantClient
 from dotenv import load_dotenv
 
 # Disable SSL verification warnings if user/pass is configured with self-signed certificate
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class ImageRetrieveService:
-    """Service to handle generating image/text embeddings and retrieving images using Elasticsearch."""
+    """Service to handle generating image/text embeddings and retrieving images using Qdrant."""
     
     def __init__(
         self,
-        es_url: Optional[str] = None,
-        es_user: Optional[str] = None,
-        es_password: Optional[str] = None
+        qdrant_url: Optional[str] = None,
+        qdrant_api_key: Optional[str] = None,
+        es_url: Optional[str] = None,      # Kept for compatibility
+        es_user: Optional[str] = None,     # Kept for compatibility
+        es_password: Optional[str] = None  # Kept for compatibility
     ):
         load_dotenv(override=True)
-        self.es_url = es_url or os.getenv("ELASTICSEARCH_URL", "http://171.232.252.198:9200").strip()
+        self.qdrant_url = qdrant_url or os.getenv("QDRANT_URL", "").strip()
+        self.qdrant_api_key = qdrant_api_key or os.getenv("QDRANT_API_KEY", "").strip()
+        self.collection_name = os.getenv("QDRANT_COLLECTION", "vector_embeddings").strip()
         
-        # Force HTTP scheme
-        if self.es_url.lower().startswith("https://"):
-            self.es_url = "http://" + self.es_url[8:]
-        elif not self.es_url.lower().startswith("http://"):
-            self.es_url = "http://" + self.es_url
-            
-        self.es_user = es_user or os.getenv("ELASTICSEARCH_USER", "elastic").strip()
-        self.es_password = es_password or os.getenv("ELASTICSEARCH_PASSWORD", "").strip()
-        
-        conn_params = {"hosts": [self.es_url]}
-        if self.es_user and self.es_password:
-            conn_params["basic_auth"] = (self.es_user, self.es_password)
-            
-        print(f"ImageRetrieveService: Connecting to Elasticsearch server at {self.es_url}...")
-        self.es = Elasticsearch(**conn_params)
-        
-        # Test connection
-        if self.es.ping():
-            print("ImageRetrieveService: Successfully connected to Elasticsearch.")
+        if self.qdrant_url:
+            if not self.qdrant_url.lower().startswith("http://") and not self.qdrant_url.lower().startswith("https://"):
+                self.qdrant_url = "http://" + self.qdrant_url
+            print(f"ImageRetrieveService: Connecting to Qdrant server at {self.qdrant_url}...")
+            self.qdrant_client = QdrantClient(url=self.qdrant_url, api_key=self.qdrant_api_key or None)
         else:
-            print("ImageRetrieveService: Connection to Elasticsearch returned ping False.")
+            print("ImageRetrieveService: QDRANT_URL is empty, using local in-memory Qdrant DB.")
+            self.qdrant_client = QdrantClient(":memory:")
+            
+        # Test connection
+        try:
+            self.qdrant_client.get_collections()
+            print("ImageRetrieveService: Successfully connected to Qdrant.")
+        except Exception as e:
+            print(f"ImageRetrieveService: Connection to Qdrant failed: {e}")
             
         self._model = None
         
@@ -152,77 +150,31 @@ class ImageRetrieveService:
         return [list(emb)]
 
     def create_index(self, index_name: str, vector_dim: int) -> bool:
-        """Create Elasticsearch index with mappings appropriate for the vector dimension."""
-        if self.es.indices.exists(index=index_name):
-            print(f"ImageRetrieveService: Index '{index_name}' already exists.")
+        """Create Qdrant collection appropriate for the vector dimension."""
+        try:
+            collections = self.qdrant_client.get_collections()
+            exists = any(c.name == index_name for c in collections.collections)
+            if exists:
+                print(f"ImageRetrieveService: Collection '{index_name}' already exists.")
+                return False
+        except Exception as e:
+            print(f"ImageRetrieveService: Error checking collection existence: {e}")
+            
+        print(f"ImageRetrieveService: Creating Qdrant collection '{index_name}' for dimension {vector_dim}...")
+        try:
+            from qdrant_client.models import Distance, VectorParams
+            self.qdrant_client.create_collection(
+                collection_name=index_name,
+                vectors_config=VectorParams(size=vector_dim, distance=Distance.COSINE)
+            )
+            print(f"ImageRetrieveService: Collection '{index_name}' created successfully.")
+            return True
+        except Exception as e:
+            print(f"ImageRetrieveService: Failed to create collection '{index_name}': {e}")
             return False
-            
-        print(f"ImageRetrieveService: Creating index '{index_name}' for dimension {vector_dim}...")
-        
-        properties = {
-            "file_name": {"type": "keyword"},
-            "file_path": {"type": "keyword"},
-            "input_type": {"type": "keyword"},
-            "timestamp": {"type": "date"},
-            "vector_dim": {"type": "integer"},
-            "description": {"type": "text"}
-        }
-        
-        if vector_dim <= 1024:
-            properties["embeddings"] = {
-                "type": "dense_vector",
-                "dims": vector_dim,
-                "index": True,
-                "similarity": "cosine"
-            }
-        else:
-            # Large vector: split into 5 parts (up to 5120 dims, 1024 each to fit Elasticsearch index limits)
-            for i in range(1, 6):
-                properties[f"embeddings_part{i}"] = {
-                    "type": "dense_vector",
-                    "dims": 1024,
-                    "index": True,
-                    "similarity": "cosine"
-                }
-                properties[f"norm_part{i}"] = {"type": "float"}
-            
-        index_mapping = {"mappings": {"properties": properties}}
-        self.es.indices.create(index=index_name, body=index_mapping)
-        print(f"ImageRetrieveService: Index '{index_name}' created successfully.")
-        return True
-
-    def _prepare_vector_payload(self, vector: List[float]) -> Dict[str, Any]:
-        """Normalize vector and split it if dimension > 2048."""
-        dim = len(vector)
-        arr = np.array(vector, dtype=np.float32)
-        norm = np.linalg.norm(arr)
-        if norm > 0:
-            arr = arr / norm
-            
-        payload = {"vector_dim": dim}
-        
-        if dim <= 1024:
-            payload["embeddings"] = arr.tolist()
-        else:
-            # Split unit normalized vector into 5 parts of max 1024 dims each (0-1023, 1024-2047, 2048-3071, 3072-4095, 4096-5119)
-            for i in range(1, 6):
-                start = (i - 1) * 1024
-                end = i * 1024
-                part = np.zeros(1024, dtype=np.float32)
-                part_len = min(dim - start, 1024)
-                if part_len > 0:
-                    part[0:part_len] = arr[start:start+part_len]
-                
-                n = float(np.linalg.norm(part))
-                u = (part / n).tolist() if n > 0 else [0.0] * 1024
-                
-                payload[f"embeddings_part{i}"] = u
-                payload[f"norm_part{i}"] = n
-            
-        return payload
 
     def index_image(self, file_path: str, index_name: str) -> Dict[str, Any]:
-        """Generate embedding for an image and index it in Elasticsearch."""
+        """Generate embedding for an image and index it in Qdrant."""
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Image file '{file_path}' does not exist.")
             
@@ -265,29 +217,50 @@ class ImageRetrieveService:
         vector = embeddings[0]
         dim = len(vector)
         
-        # Ensure index exists
+        # Ensure collection exists
         self.create_index(index_name, dim)
         
+        # Determine vector payload format dynamically (named vs unnamed vectors)
+        try:
+            collection_info = self.qdrant_client.get_collection(index_name)
+            vectors_config = collection_info.config.params.vectors
+            if isinstance(vectors_config, dict):
+                vector_name = list(vectors_config.keys())[0]
+                qdrant_vector = {vector_name: vector}
+            else:
+                qdrant_vector = vector
+        except Exception as e:
+            print(f"ImageRetrieveService: Error getting collection configuration: {e}")
+            qdrant_vector = vector
+            
         # Generate image description using vision LLM
         description = self.generate_image_description(base64_data)
         
-        # Process vector payload
-        doc_payload = self._prepare_vector_payload(vector)
-        doc_payload.update({
-            "file_name": file_name,
-            "file_path": os.path.abspath(file_path),
-            "input_type": "image",
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "description": description
-        })
-        
         # Document ID based on filename hash
         doc_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, file_name))
-        res = self.es.index(index=index_name, id=doc_id, document=doc_payload)
-        return res
+        
+        from qdrant_client.models import PointStruct
+        res = self.qdrant_client.upsert(
+            collection_name=index_name,
+            points=[
+                PointStruct(
+                    id=doc_id,
+                    vector=qdrant_vector,
+                    payload={
+                        "file_name": file_name,
+                        "file_path": os.path.abspath(file_path),
+                        "input_type": "image",
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                        "description": description
+                    }
+                )
+            ]
+        )
+        return {"result": "created", "_id": doc_id, "status": str(res.status)}
+
 
     def index_directory(self, dir_path: str, index_name: str) -> Dict[str, Any]:
-        """Scan a directory for images and index all of them."""
+        """Scan a directory for images and index all of them into Qdrant."""
         if not os.path.isdir(dir_path):
             raise NotADirectoryError(f"Directory '{dir_path}' does not exist.")
             
@@ -308,121 +281,75 @@ class ImageRetrieveService:
                 errors[file] = str(e)
                 print(f"Error indexing {file}: {e}")
                 
-        if success_count > 0:
-            try:
-                self.es.indices.refresh(index=index_name)
-            except Exception as e:
-                print(f"Error refreshing index '{index_name}': {e}")
-                
         return {
             "total_processed": len(image_files),
-                "success_count": success_count,
+            "success_count": success_count,
             "fail_count": fail_count,
             "errors": errors
         }
 
     def _search_by_vector(self, vector: List[float], index_name: str, top_k: int = 6) -> List[Dict[str, Any]]:
-        """Perform vector similarity search on Elasticsearch using the provided embedding vector."""
-        dim = len(vector)
-        
-        # Retrieve mapping to check fields
-        mapping = self.es.indices.get_mapping(index=index_name)
-        props = mapping[index_name]["mappings"]["properties"]
-        
-        # Check if index is mapped for split vectors or native
-        is_split = "embeddings_part1" in props
-        
-        if not is_split:
-            # Native vector query
-            # We normalize the query vector
-            arr = np.array(vector, dtype=np.float32)
-            norm = np.linalg.norm(arr)
-            if norm > 0:
-                arr = arr / norm
-            q_vector = arr.tolist()
+        """Perform vector similarity search on Qdrant using the provided embedding vector."""
+        try:
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
             
-            search_body = {
-                "query": {
-                    "script_score": {
-                        "query": {"term": {"input_type": "image"}},
-                        "script": {
-                            "source": "cosineSimilarity(params.query_vector, 'embeddings') + 1.0",
-                            "params": {"query_vector": q_vector}
-                        }
-                    }
-                },
-                "size": top_k
-            }
-        else:
-            # Split vector query
-            arr = np.array(vector, dtype=np.float32)
-            norm = np.linalg.norm(arr)
-            if norm > 0:
-                arr = arr / norm
+            # Determine vector format dynamically (named vs unnamed vectors)
+            vector_name = None
+            try:
+                collection_info = self.qdrant_client.get_collection(index_name)
+                vectors_config = collection_info.config.params.vectors
+                if isinstance(vectors_config, dict):
+                    vector_name = list(vectors_config.keys())[0]
+            except Exception as e:
+                print(f"ImageRetrieveService: Error getting collection configuration for search: {e}")
                 
-            params = {}
-            source_lines = []
+            query_res = self.qdrant_client.query_points(
+                collection_name=index_name,
+                query=vector,
+                using=vector_name,
+                query_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="input_type",
+                            match=MatchValue(value="image")
+                        )
+                    ]
+                ),
+                limit=top_k
+            )
             
-            for i in range(1, 6):
-                start = (i - 1) * 1024
-                part = np.zeros(1024, dtype=np.float32)
-                part_len = min(dim - start, 1024)
-                if part_len > 0:
-                    part[0:part_len] = arr[start:start+part_len]
-                    
-                qn = float(np.linalg.norm(part))
-                uq = (part / qn).tolist() if qn > 0 else [0.0] * 1024
+            results = []
+            for hit in query_res.points:
+                similarity = hit.score
                 
-                params[f"uq{i}"] = uq
-                params[f"qn{i}"] = qn
+                # Map score to percentage similarity [0%, 100%]
+                percent = max(0.0, min(100.0, ((similarity + 1.0) / 2.0) * 100.0))
                 
-                source_lines.append(f"""
-                                if (doc['norm_part{i}'].size() > 0 && doc['norm_part{i}'].value > 0 && params.qn{i} > 0) {{
-                                    score += cosineSimilarity(params.uq{i}, 'embeddings_part{i}') * doc['norm_part{i}'].value * params.qn{i};
-                                }}""")
-                
-            painless_source = "double score = 0.0;" + "".join(source_lines) + " return score + 1.0;"
-            
-            search_body = {
-                "query": {
-                    "script_score": {
-                        "query": {"term": {"input_type": "image"}},
-                        "script": {
-                            "source": painless_source,
-                            "params": params
-                        }
-                    }
-                },
-                "size": top_k
-            }
-            
-        res = self.es.search(index=index_name, body=search_body)
-        
-        results = []
-        for hit in res["hits"]["hits"]:
-            # Subtract 1.0 back to return the original cosine similarity score [-1.0, 1.0]
-            similarity = hit["_score"] - 1.0
-            
-            # Map score to percentage similarity [0%, 100%]
-            percent = max(0.0, min(100.0, ((similarity + 1.0) / 2.0) * 100.0))
-            
-            src = hit["_source"]
-            results.append({
-                "id": hit["_id"],
-                "score": similarity,
-                "percentage": round(percent, 2),
-                "file_name": src.get("file_name"),
-                "file_path": src.get("file_path"),
-                "timestamp": src.get("timestamp"),
-                "description": src.get("description", "")
-            })
-            
-        return results
+                payload = hit.payload or {}
+                results.append({
+                    "id": hit.id,
+                    "score": similarity,
+                    "percentage": round(percent, 2),
+                    "file_name": payload.get("file_name"),
+                    "file_path": payload.get("file_path"),
+                    "timestamp": payload.get("timestamp"),
+                    "description": payload.get("description", "")
+                })
+            return results
+        except Exception as e:
+            print(f"ImageRetrieveService: Error searching by vector in Qdrant: {e}")
+            return []
 
     def search_images(self, query_text: str, index_name: str, top_k: int = 6) -> List[Dict[str, Any]]:
         """Search images using a text query."""
-        if not self.es.indices.exists(index=index_name):
-            print(f"ImageRetrieveService: Index '{index_name}' does not exist.")
+        try:
+            collections = self.qdrant_client.get_collections()
+            exists = any(c.name == index_name for c in collections.collections)
+            if not exists:
+                print(f"ImageRetrieveService: Collection '{index_name}' does not exist.")
+                return []
+        except Exception as e:
+            print(f"ImageRetrieveService: Error checking collection: {e}")
             return []
             
         # Get query embedding
@@ -435,8 +362,14 @@ class ImageRetrieveService:
 
     def search_images_by_image(self, image_base64: str, index_name: str, top_k: int = 6) -> List[Dict[str, Any]]:
         """Search images using an uploaded query image."""
-        if not self.es.indices.exists(index=index_name):
-            print(f"ImageRetrieveService: Index '{index_name}' does not exist.")
+        try:
+            collections = self.qdrant_client.get_collections()
+            exists = any(c.name == index_name for c in collections.collections)
+            if not exists:
+                print(f"ImageRetrieveService: Collection '{index_name}' does not exist.")
+                return []
+        except Exception as e:
+            print(f"ImageRetrieveService: Error checking collection: {e}")
             return []
             
         # Ensure correct prefix format for base64 payload if it's not present

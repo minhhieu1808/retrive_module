@@ -86,4 +86,127 @@ py index_fonts.py search "Arial"
 Hoặc tìm kiếm phông chữ đậm (`bold`) giới hạn 5 kết quả hiển thị:
 ```powershell
 py index_fonts.py search "bold" --size 5
-```
+
+---
+
+## 4. Hướng Dẫn Sử Dụng API Tìm Kiếm Hình Ảnh (Postman & Integrations)
+
+Module Tìm kiếm hình ảnh cung cấp các API RESTful giúp lập chỉ mục và thực hiện các truy vấn tìm kiếm ảnh tương tự bằng văn bản (Text-to-Image) hoặc hình ảnh (Image-to-Image). Dưới đây là mô tả chi tiết cách cấu hình và gọi các API này bằng **Postman**.
+
+### 4.1. Lập chỉ mục thư mục ảnh (Index Images)
+API này quét toàn bộ các tệp hình ảnh nằm trong thư mục `image` tại thư mục gốc dự án, tự động thay đổi kích thước (resize) về tối đa 512px để tối ưu dung lượng payload và tránh tràn RAM GPU, tạo vector embedding, đồng thời gọi mô hình Vision LLM (`google/gemma-4-31b-it`) để tự động tạo mô tả ảnh bằng tiếng Việt và lưu tất cả vào Elasticsearch.
+
+*   **URL**: `http://127.0.0.1:8000/api/images/index`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Content-Type`: `application/json`
+*   **Request Body (Body)**: Chọn `none` (Trống)
+*   **Cách thiết lập trong Postman**:
+    1.  Tạo request mới, chọn phương thức là `POST`.
+    2.  Nhập URL: `http://127.0.0.1:8000/api/images/index`.
+    3.  Nhấn **Send**.
+*   **Response mẫu (200 OK)**:
+    ```json
+    {
+      "total_processed": 3,
+      "success_count": 3,
+      "fail_count": 0,
+      "errors": {}
+    }
+    ```
+
+---
+
+### 4.2. Tìm kiếm hình ảnh bằng mô tả văn bản (Text-to-Image Search)
+Tìm kiếm các hình ảnh trong hệ thống dựa trên mô tả văn bản tiếng Việt/tiếng Anh.
+
+*   **URL**: `http://127.0.0.1:8000/api/images/search`
+*   **Method**: `GET`
+*   **Headers**: *Trống*
+*   **Query Parameters (Params)**:
+    *   `query` (Bắt buộc): Chuỗi văn bản mô tả nội dung ảnh cần tìm (Ví dụ: `bục tròn màu nâu`, `bục gỗ màu trắng`).
+    *   `limit` (Tùy chọn, mặc định: 6): Số lượng kết quả tối đa muốn nhận về.
+*   **Cách thiết lập trong Postman**:
+    1.  Tạo request mới, chọn phương thức là `GET`.
+    2.  Nhập URL: `http://127.0.0.1:8000/api/images/search`.
+    3.  Tại tab **Params**, nhập các cặp key-value:
+        *   `query`: `bục tròn màu nâu`
+        *   `limit`: `2`
+    4.  Nhấn **Send**.
+*   **Response mẫu (200 OK)**:
+    ```json
+    {
+      "results": [
+        {
+          "id": "1f26399e-08f2-429b-8ea7-5023b27ec899",
+          "score": 0.3594,
+          "percentage": 67.97,
+          "file_name": "1f26399e-08f2-429b-8ea7-5023b27ec899.jpg",
+          "file_path": "D:\\retrive\\image\\1f26399e-08f2-429b-8ea7-5023b27ec899.jpg",
+          "timestamp": "2026-06-04T16:05:12.123456+00:00",
+          "description": "Hình ảnh là một bục trưng bày hình tròn, màu nâu nhạt/be, đặt trên nền tối giản cùng tông màu trung tính. Phong cách thiết kế 3D hiện đại, sạch sẽ, tạo cảm giác nhẹ nhàng và sang trọng."
+        }
+      ]
+    }
+    ```
+
+---
+
+### 4.3. Tìm kiếm hình ảnh bằng cách tải ảnh lên trực tiếp (Image-to-Image Search - Multipart)
+Tìm kiếm các hình ảnh tương đồng bằng cách upload trực tiếp một file ảnh từ máy tính của bạn (đây là cách nhanh nhất và thuận tiện nhất khi dùng Postman).
+
+*   **URL**: `http://127.0.0.1:8000/api/images/search-by-image-file`
+*   **Method**: `POST`
+*   **Headers**: *Trống* (Postman sẽ tự động sinh header `multipart/form-data` kèm boundary khi bạn tải file).
+*   **Request Body (Body)**: Chọn kiểu **form-data**
+    *   `file` (Kiểu: **File**, Bắt buộc): Chọn tệp hình ảnh từ máy tính của bạn.
+    *   `limit` (Kiểu: **Text**, Tùy chọn, mặc định: 6): Số lượng kết quả tối đa muốn nhận về.
+*   **Cách thiết lập trong Postman**:
+    1.  Tạo request mới, chọn phương thức là `POST`.
+    2.  Nhập URL: `http://127.0.0.1:8000/api/images/search-by-image-file`.
+    3.  Vào tab **Body**, chọn **form-data**.
+    4.  Ở dòng đầu tiên: nhập key là `file`. Rê chuột vào phần cuối ô key để đổi kiểu dữ liệu từ **Text** sang **File**. Nhấn **Select Files** và tải ảnh lên.
+    5.  Ở dòng thứ hai: nhập key là `limit` (kiểu Text), nhập value là `2`.
+    6.  Nhấn **Send**.
+*   **Response mẫu (200 OK)**:
+    ```json
+    {
+      "results": [
+        {
+          "id": "1f26399e-08f2-429b-8ea7-5023b27ec899",
+          "score": 1.0,
+          "percentage": 100.0,
+          "file_name": "91.jpg",
+          "file_path": "D:\\retrive\\image\\91.jpg",
+          "timestamp": "2026-06-04T16:05:15.123456+00:00",
+          "description": "Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng khác nhau như hình trụ tròn và hình khối chữ nhật. Tất cả đều có màu trắng tinh khôi, phong cách tối giản, hiện đại trên nền trắng."
+        }
+      ]
+    }
+    ```
+
+---
+
+### 4.4. Tìm kiếm hình ảnh bằng chuỗi Base64 (Image-to-Image Search - Base64 JSON)
+Tìm kiếm các hình ảnh tương đồng bằng cách gửi chuỗi Base64 của ảnh trong JSON payload.
+
+*   **URL**: `http://127.0.0.1:8000/api/images/search-by-image`
+*   **Method**: `POST`
+*   **Headers**:
+    *   `Content-Type`: `application/json`
+*   **Request Body (Body)**: Chọn **raw**, định dạng **JSON**
+    *   `image` (string, Bắt buộc): Chuỗi Base64 Data URL của ảnh (Ví dụ: `data:image/jpeg;base64,...` hoặc chuỗi base64 thuần).
+    *   `limit` (integer, Tùy chọn, mặc định: 6): Số lượng kết quả tối đa.
+*   **Cách thiết lập trong Postman**:
+    1.  Tạo request mới, chọn phương thức là `POST`.
+    2.  Nhập URL: `http://127.0.0.1:8000/api/images/search-by-image`.
+    3.  Vào tab **Body**, chọn **raw**, đổi kiểu từ `Text` sang `JSON`.
+    4.  Nhập JSON body:
+        ```json
+        {
+          "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP...",
+          "limit": 2
+        }
+        ```
+    5.  Nhấn **Send**.
+

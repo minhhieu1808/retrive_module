@@ -2,7 +2,7 @@ import os
 import json
 import httpx
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -112,6 +112,10 @@ async def chat_endpoint(request: ChatRequest):
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Mount image folder to serve indexed images
+os.makedirs("image", exist_ok=True)
+app.mount("/image", StaticFiles(directory="image"), name="image")
+
 @app.get("/")
 async def get_index():
     """Serve the main Chat UI."""
@@ -120,7 +124,7 @@ async def get_index():
         return FileResponse(index_path)
     return {"message": "Welcome to Gemma Q&A API. Please check if static/index.html is present."}
 
-# --- Multimodal Embedding & Qdrant Integration ---
+# --- Multimodal Embedding & Elasticsearch Integration ---
 
 class InputItem(BaseModel):
     type: str # "text" or "image"
@@ -134,6 +138,7 @@ class EmbeddingResponse(BaseModel):
 
 # Lazy load objects to optimize startup
 _model = None
+_es_client = None
 _qdrant_client = None
 
 def get_embedding_model():
@@ -156,6 +161,31 @@ def get_embedding_model():
                 _model = "dummy"
     return _model
 
+def get_elasticsearch_client():
+    global _es_client
+    if _es_client is None:
+        from elasticsearch import Elasticsearch
+        import urllib3
+        # Disable SSL verification warnings if user/pass is configured with self-signed certificate
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        es_url = os.getenv("ELASTICSEARCH_URL", "http://171.232.252.198:9200").strip()
+        if es_url.lower().startswith("https://"):
+            es_url = "http://" + es_url[8:]
+        elif not es_url.lower().startswith("http://"):
+            es_url = "http://" + es_url
+            
+        es_user = os.getenv("ELASTICSEARCH_USER", "elastic").strip()
+        es_password = os.getenv("ELASTICSEARCH_PASSWORD", "").strip()
+        
+        conn_params = {"hosts": [es_url]}
+        if es_user and es_password:
+            conn_params["basic_auth"] = (es_user, es_password)
+            
+        print(f"Connecting to Elasticsearch server at {es_url}...")
+        _es_client = Elasticsearch(**conn_params)
+    return _es_client
+
 def get_qdrant_client():
     global _qdrant_client
     if _qdrant_client is None:
@@ -164,11 +194,13 @@ def get_qdrant_client():
         qdrant_api_key = os.getenv("QDRANT_API_KEY", "").strip()
         
         if qdrant_url:
+            if not qdrant_url.lower().startswith("http://") and not qdrant_url.lower().startswith("https://"):
+                qdrant_url = "http://" + qdrant_url
             print(f"Connecting to Qdrant server at {qdrant_url}...")
             _qdrant_client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key or None)
         else:
-            print("QDRANT_URL not configured. Using local in-memory Qdrant client...")
-            _qdrant_client = QdrantClient(location=":memory:")
+            print("QDRANT_URL is empty, using local in-memory Qdrant DB.")
+            _qdrant_client = QdrantClient(":memory:")
     return _qdrant_client
 
 def generate_multimodal_embedding(inputs: List[InputItem]) -> List[List[float]]:
@@ -283,32 +315,25 @@ async def create_embeddings(request: EmbeddingRequest):
         # 2. Store in Qdrant
         if vectors:
             q_client = get_qdrant_client()
-            collection_name = os.getenv("QDRANT_COLLECTION", "vector_embedding").strip()
+            collection_name = os.getenv("QDRANT_COLLECTION", "vector_embeddings").strip()
             vector_dim = len(vectors[0])
             
             # Ensure collection exists
             try:
-                exists = q_client.collection_exists(collection_name)
+                collections = q_client.get_collections()
+                exists = any(c.name == collection_name for c in collections.collections)
             except Exception:
                 exists = False
-                try:
-                    q_client.get_collection(collection_name)
-                    exists = True
-                except Exception:
-                    pass
-                    
+                
             if not exists:
                 from qdrant_client.models import Distance, VectorParams
                 q_client.create_collection(
                     collection_name=collection_name,
-                    vectors_config={
-                        "embeddings": VectorParams(size=vector_dim, distance=Distance.COSINE)
-                    },
+                    vectors_config=VectorParams(size=vector_dim, distance=Distance.COSINE)
                 )
                 
-            # Index points into Qdrant
+            # Index documents into Qdrant
             from qdrant_client.models import PointStruct
-            points = []
             for idx, vector in enumerate(vectors):
                 input_type = "unknown"
                 input_data = ""
@@ -321,23 +346,21 @@ async def create_embeddings(request: EmbeddingRequest):
                     input_type = "multimodal_fallback"
                     input_data = " ".join([item.data for item in request.inputs if item.type == "text"]).strip()
                     
-                point_id = str(uuid.uuid4())
-                points.append(
-                    PointStruct(
-                        id=point_id,
-                        vector={"embeddings": vector},
-                        payload={
-                            "input_type": input_type,
-                            "input_data": input_data,
-                            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
-                        }
-                    )
+                doc_id = str(uuid.uuid4())
+                q_client.upsert(
+                    collection_name=collection_name,
+                    points=[
+                        PointStruct(
+                            id=doc_id,
+                            vector=vector,
+                            payload={
+                                "input_type": input_type,
+                                "input_data": input_data,
+                                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                            }
+                        )
+                    ]
                 )
-                
-            q_client.upsert(
-                collection_name=collection_name,
-                points=points
-            )
             
         return EmbeddingResponse(embeddings=vectors)
         
@@ -345,6 +368,152 @@ async def create_embeddings(request: EmbeddingRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to generate and store embedding: {str(e)}")
+
+# --- Image Retrieve API endpoints ---
+
+@app.get("/api/images/stats")
+async def get_image_stats_endpoint():
+    """Retrieve collection status and item count from Qdrant."""
+    try:
+        from image_retrieve_service import ImageRetrieveService
+        service = ImageRetrieveService()
+        collection_name = os.getenv("QDRANT_COLLECTION", "vector_embeddings").strip()
+        
+        # Check if collection exists
+        try:
+            collections = service.qdrant_client.get_collections()
+            exists = any(c.name == collection_name for c in collections.collections)
+        except Exception:
+            exists = False
+            
+        if not exists:
+            return {
+                "exists": False,
+                "collection_name": collection_name,
+                "points_count": 0,
+                "status": "Not Created"
+            }
+            
+        collection_info = service.qdrant_client.get_collection(collection_name)
+        
+        # Handle different structures of vector configurations in Qdrant
+        vector_size = None
+        if hasattr(collection_info.config.params, 'vectors'):
+            vectors_param = collection_info.config.params.vectors
+            if hasattr(vectors_param, 'size'):
+                vector_size = vectors_param.size
+            elif isinstance(vectors_param, dict) and len(vectors_param) > 0:
+                first_key = list(vectors_param.keys())[0]
+                first_vector = vectors_param[first_key]
+                if hasattr(first_vector, 'size'):
+                    vector_size = first_vector.size
+                elif isinstance(first_vector, dict) and 'size' in first_vector:
+                    vector_size = first_vector['size']
+                
+        return {
+            "exists": True,
+            "collection_name": collection_name,
+            "points_count": collection_info.points_count,
+            "status": str(collection_info.status),
+            "vector_size": vector_size
+        }
+    except Exception as e:
+        print(f"Error fetching stats: {e}")
+        return {
+            "exists": False,
+            "error": str(e),
+            "points_count": 0
+        }
+
+@app.post("/api/images/index")
+async def index_images_endpoint():
+    """Trigger indexing of the image directory."""
+    try:
+        from image_retrieve_service import ImageRetrieveService
+        service = ImageRetrieveService()
+        index_name = os.getenv("QDRANT_COLLECTION", "vector_embeddings").strip()
+        result = service.index_directory("image", index_name)
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to index images: {str(e)}")
+
+@app.get("/api/images/search")
+async def search_images_endpoint(query: str, limit: int = 6):
+    """Retrieve images matching the query description."""
+    if not query:
+        raise HTTPException(status_code=400, detail="Query string parameter is required")
+    try:
+        from image_retrieve_service import ImageRetrieveService
+        service = ImageRetrieveService()
+        index_name = os.getenv("QDRANT_COLLECTION", "vector_embeddings").strip()
+        results = service.search_images(query, index_name, top_k=limit)
+        return {"results": results}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to search images: {str(e)}")
+
+class ImageSearchRequest(BaseModel):
+    image: str # Base64 representation (data:image/...)
+    limit: int = 6
+
+@app.post("/api/images/search-by-image")
+async def search_images_by_image_endpoint(request: ImageSearchRequest):
+    """Retrieve images matching the uploaded query image."""
+    if not request.image:
+        raise HTTPException(status_code=400, detail="Image base64 data is required")
+    try:
+        from image_retrieve_service import ImageRetrieveService
+        service = ImageRetrieveService()
+        index_name = os.getenv("QDRANT_COLLECTION", "vector_embeddings").strip()
+        results = service.search_images_by_image(request.image, index_name, top_k=request.limit)
+        return {"results": results}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to search images by image: {str(e)}")
+
+@app.post("/api/images/search-by-image-file")
+async def search_images_by_image_file_endpoint(file: UploadFile = File(...), limit: int = Form(6)):
+    """Retrieve images matching the uploaded query image file (multipart/form-data)."""
+    try:
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+            
+        # Resize image using Pillow to optimize embedding payload size and avoid VRAM OOM
+        from PIL import Image
+        import io
+        import base64
+        
+        try:
+            with Image.open(io.BytesIO(content)) as img:
+                img.thumbnail((512, 512))
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                buffer = io.BytesIO()
+                img.save(buffer, format="JPEG", quality=85)
+                img_bytes = buffer.getvalue()
+            encoded_string = base64.b64encode(img_bytes).decode('utf-8')
+            mime_type = "image/jpeg"
+        except Exception as resize_err:
+            print(f"Warning: Failed to resize query image ({resize_err}). Using raw file upload.")
+            encoded_string = base64.b64encode(content).decode('utf-8')
+            mime_type = file.content_type or "image/jpeg"
+            
+        base64_data = f"data:{mime_type};base64,{encoded_string}"
+        
+        from image_retrieve_service import ImageRetrieveService
+        service = ImageRetrieveService()
+        index_name = os.getenv("QDRANT_COLLECTION", "vector_embeddings").strip()
+        results = service.search_images_by_image(base64_data, index_name, top_k=limit)
+        return {"results": results}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to search images by file: {str(e)}")
 
 if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")

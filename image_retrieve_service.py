@@ -413,8 +413,32 @@ class ImageRetrieveService:
             
         # Ensure correct prefix format for base64 payload if it's not present
         if not image_base64.startswith("data:"):
-            # Fallback to jpeg mimetype guess
             image_base64 = "data:image/jpeg;base64," + image_base64
+            
+        # Resize and compress the query image to 512px JPEG 85 to match indexing preprocessing
+        try:
+            import base64
+            from PIL import Image
+            import io
+            
+            # Extract header and base64 string
+            header, base64_str = image_base64.split(",", 1) if "," in image_base64 else ("", image_base64)
+            img_bytes = base64.b64decode(base64_str)
+            
+            with Image.open(io.BytesIO(img_bytes)) as img:
+                # Resize so that max dimension is 512px maintaining aspect ratio
+                img.thumbnail((512, 512))
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                    
+                buffer = io.BytesIO()
+                img.save(buffer, format="JPEG", quality=85)
+                img_bytes_resized = buffer.getvalue()
+                
+            encoded_string = base64.b64encode(img_bytes_resized).decode('utf-8')
+            image_base64 = f"data:image/jpeg;base64,{encoded_string}"
+        except Exception as resize_err:
+            print(f"Warning: Failed to preprocess query image: {resize_err}. Using original query image.")
             
         # Get query embedding
         embeddings = self.generate_embeddings([{"type": "image", "data": image_base64}])

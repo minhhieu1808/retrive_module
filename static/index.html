@@ -50,6 +50,19 @@
                     </div>
                 </div>
 
+                <!-- Navigation menu -->
+                <div class="nav-section">
+                    <label class="section-title"><i data-lucide="compass"></i> Menu chức năng</label>
+                    <div class="nav-links">
+                        <button class="nav-link active" id="tab-chat-btn">
+                            <i data-lucide="message-square"></i> Trò chuyện Gemma
+                        </button>
+                        <button class="nav-link" id="tab-image-btn">
+                            <i data-lucide="image"></i> Tìm kiếm hình ảnh
+                        </button>
+                    </div>
+                </div>
+
                 <div class="settings-section">
                     <label class="section-title"><i data-lucide="cpu"></i> Cấu hình mô hình</label>
                     <div class="custom-select-wrapper" style="margin-bottom: 8px;">
@@ -86,7 +99,7 @@
             </aside>
 
             <!-- Chat Area -->
-            <section class="chat-area">
+            <section class="chat-area" id="chat-area">
                 <header class="chat-header">
                     <div class="header-info">
                         <h3 id="current-model-display">Gemma 4 31B IT</h3>
@@ -131,7 +144,196 @@
                     </div>
                 </footer>
             </section>
+
+            <!-- Image Retrieval Area -->
+            <section id="image-area" class="image-area hidden">
+                <header class="chat-header">
+                    <div class="header-info">
+                        <h3>Tìm kiếm hình ảnh đa phương thức</h3>
+                        <span class="status-pill"><span class="pulse-dot"></span>Qdrant Vector Search</span>
+                    </div>
+                    <button id="index-images-btn" class="btn btn-secondary btn-sm" title="Quét thư mục và sinh embeddings vào Qdrant">
+                        <i data-lucide="refresh-cw"></i> Index hình ảnh
+                    </button>
+                </header>
+
+                <div class="image-search-container">
+                    <!-- Stats Grid Panel -->
+                    <div class="stats-panel glass-panel">
+                        <div class="stat-item">
+                            <i data-lucide="database" class="stat-icon purple"></i>
+                            <div class="stat-info">
+                                <span class="stat-label">Vector Database</span>
+                                <span class="stat-value" id="stats-db-type">Qdrant DB</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i data-lucide="image" class="stat-icon indigo"></i>
+                            <div class="stat-info">
+                                <span class="stat-label">Tổng số ảnh đã index</span>
+                                <span class="stat-value" id="stats-total-images">--</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i data-lucide="zap" class="stat-icon green"></i>
+                            <div class="stat-info">
+                                <span class="stat-label">Chiều Vector</span>
+                                <span class="stat-value" id="stats-vector-dim">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Configuration (Tabs & Modes) -->
+                    <div class="search-panel glass-panel">
+                        <!-- Mode Selector Pill Tab -->
+                        <div class="search-mode-tabs">
+                            <button type="button" class="tab-btn active" id="mode-text-btn">
+                                <i data-lucide="file-text"></i> Tìm bằng văn bản
+                            </button>
+                            <button type="button" class="tab-btn" id="mode-image-btn">
+                                <i data-lucide="image"></i> Tìm bằng hình ảnh
+                            </button>
+                        </div>
+
+                        <!-- Text Search Input Container -->
+                        <div id="search-text-container" class="search-mode-content">
+                            <form id="image-text-search-form" class="search-form">
+                                <div class="search-input-container">
+                                    <i data-lucide="search" class="search-icon"></i>
+                                    <input 
+                                        type="text" 
+                                        id="image-query-text-input" 
+                                        placeholder="Mô tả bức ảnh bạn muốn tìm... (Ví dụ: 'phong cảnh thiên nhiên xanh mát')"
+                                    >
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-lucide="search"></i> Tìm kiếm
+                                </button>
+                            </form>
+                            
+                            <!-- Search Suggestions -->
+                            <div class="search-suggestions">
+                                <span class="suggestion-label"><i data-lucide="info" style="width: 14px; height: 14px;"></i> Gợi ý:</span>
+                                <div class="suggestion-chips" style="display: inline-flex; margin-left: 8px;">
+                                    <button class="chip chip-sm" onclick="useImageSuggestion('Bục trưng bày sản phẩm màu xanh lá')">Bục sản phẩm xanh</button>
+                                    <button class="chip chip-sm" onclick="useImageSuggestion('phong cảnh thiên nhiên')">Thiên nhiên</button>
+                                    <button class="chip chip-sm" onclick="useImageSuggestion('ảnh chân dung cô gái')">Chân dung cô gái</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Search Upload Container -->
+                        <div id="search-image-container" class="search-mode-content hidden">
+                            <div class="image-upload-wrapper">
+                                <!-- Dropzone -->
+                                <div id="image-dropzone" class="image-dropzone">
+                                    <i data-lucide="upload-cloud" class="upload-icon"></i>
+                                    <p class="drop-text">Kéo thả ảnh vào đây hoặc <span class="browse-link">chọn từ máy tính</span></p>
+                                    <span class="drop-subtext">Hỗ trợ định dạng PNG, JPG, JPEG, WEBP. Tự động tìm kiếm ảnh tương tự bằng vector embeddings.</span>
+                                    <input type="file" id="image-file-dropzone-input" accept="image/*" class="hidden">
+                                </div>
+
+                                <!-- Image Preview Pane -->
+                                <div id="drop-preview-pane" class="drop-preview-pane hidden">
+                                    <div class="preview-card glass-panel">
+                                        <img id="drop-preview-img" src="" alt="Preview">
+                                        <div class="preview-details">
+                                            <div class="preview-name" id="drop-preview-name">image.png</div>
+                                            <div class="preview-size" id="drop-preview-size">0 KB</div>
+                                        </div>
+                                        <button type="button" id="drop-clear-btn" class="btn btn-secondary btn-sm" title="Xóa ảnh và chọn lại">
+                                            <i data-lucide="x"></i> Xóa ảnh
+                                        </button>
+                                        <button type="button" id="drop-search-btn" class="btn btn-primary" title="Bắt đầu tìm kiếm bằng ảnh này">
+                                            <i data-lucide="search"></i> Tìm ảnh tương đồng
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Indexing status banner -->
+                    <div id="indexing-status" class="status-banner hidden">
+                        <div class="spinner"></div>
+                        <span id="indexing-status-text">Đang index thư mục hình ảnh...</span>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div class="results-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h4>Kết quả tìm kiếm hình ảnh</h4>
+                            <span class="results-db-indicator">Qdrant Vector Engine</span>
+                        </div>
+                        <span id="results-count" class="subtext">Chưa thực hiện tìm kiếm</span>
+                    </div>
+
+                    <div id="image-results-grid" class="image-results-grid">
+                        <!-- Placeholder state -->
+                        <div class="grid-placeholder">
+                            <i data-lucide="image-off"></i>
+                            <p>Chọn phương thức nhập mô tả hoặc tải ảnh truy vấn lên để bắt đầu quét cơ sở dữ liệu vector.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
+    </div>
+
+    <!-- Image Details Lightbox Modal -->
+    <div id="lightbox-modal" class="lightbox-modal hidden">
+        <div class="lightbox-backdrop" id="lightbox-backdrop"></div>
+        <div class="lightbox-content glass-panel">
+            <button id="lightbox-close-btn" class="lightbox-close-btn" title="Đóng">
+                <i data-lucide="x"></i>
+            </button>
+            <div class="lightbox-body">
+                <div class="lightbox-image-side">
+                    <img id="lightbox-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Zoomed Image" onerror="this.onerror=null; this.src='/static/placeholder.svg';">
+                </div>
+                <div class="lightbox-info-side">
+                    <div class="lightbox-title-container">
+                        <h3 id="lightbox-title">Filename.jpg</h3>
+                        <span class="similarity-badge-large" id="lightbox-badge-match">Match 98.5%</span>
+                    </div>
+                    
+                    <div class="info-section-item">
+                        <label><i data-lucide="percent"></i> Độ tương đồng hình ảnh</label>
+                        <div class="similarity-bar-container" style="margin-top: 6px;">
+                            <div class="similarity-bar-bg" style="height: 10px;">
+                                <div class="similarity-bar-fill" id="lightbox-similarity-bar" style="width: 0%;"></div>
+                            </div>
+                            <div class="similarity-bar-label" style="margin-top: 4px;">
+                                <span>Tỷ lệ khớp chính xác</span>
+                                <span id="lightbox-similarity-percent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section-item">
+                        <label><i data-lucide="file-text"></i> AI Mô tả hình ảnh (Vision Gemma)</label>
+                        <div class="ai-desc-box" id="lightbox-description">
+                            Không có mô tả chi tiết cho hình ảnh này.
+                        </div>
+                    </div>
+                    
+                    <div class="info-section-item">
+                        <label><i data-lucide="folder-open"></i> Đường dẫn tệp tin hệ thống</label>
+                        <div class="copy-path-container">
+                            <input type="text" id="lightbox-path-input" readonly value="">
+                            <button id="copy-path-btn" class="btn btn-secondary btn-sm" title="Sao chép đường dẫn">
+                                <i data-lucide="copy"></i> Sao chép
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section-item">
+                        <label><i data-lucide="clock"></i> Thời gian lập chỉ mục (Indexed at)</label>
+                        <span id="lightbox-timestamp" class="meta-val">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Custom Script -->

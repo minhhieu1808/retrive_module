@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # FastAPI Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gemma-qa-web
+    restart: always
+    ports:
+      - "8009:8000"
+    environment:
+      # Ghi đè HOST để uvicorn lắng nghe mọi interface trong container
+      - HOST=0.0.0.0
+      - PORT=8000
+    env_file:
+      - .env
+    volumes:
+      - .env:/app/.env
+      - ./image:/app/image
+      - ./font:/app/font
+      - ./static:/app/static
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: bridge

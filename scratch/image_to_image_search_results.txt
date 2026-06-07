@@ -1,0 +1,40 @@
+Query Image: 91.jpg
+  1. File: 91.jpg
+     Score: 1.0000005 (100.0%)
+  2. File: background-ghep-anh-21.jpg
+     Score: 0.730551 (86.53%)
+  3. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.681313 (84.07%)
+  4. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.6685677 (83.43%)
+============================================================
+Query Image: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+  1. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 1.0000002 (100.0%)
+  2. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.8756703 (93.78%)
+  3. File: 91.jpg
+     Score: 0.6685677 (83.43%)
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.6309817 (81.55%)
+============================================================
+Query Image: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+  1. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 1.0000002 (100.0%)
+  2. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.8756703 (93.78%)
+  3. File: 91.jpg
+     Score: 0.681313 (84.07%)
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.6725547 (83.63%)
+============================================================
+Query Image: background-ghep-anh-21.jpg
+  1. File: background-ghep-anh-21.jpg
+     Score: 1.0000001 (100.0%)
+  2. File: 91.jpg
+     Score: 0.730551 (86.53%)
+  3. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.6725547 (83.63%)
+  4. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.6309817 (81.55%)
+============================================================

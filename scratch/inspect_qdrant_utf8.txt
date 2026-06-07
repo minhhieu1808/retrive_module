@@ -1,0 +1,27 @@
+Collection: vector_embeddings
+Points count: 4
+----------------------------------------
+ID: 44890606-d4e4-58bd-9335-85a4b3400d60
+File Name: background-ghep-anh-21.jpg
+File Path: D:\retrive\image\background-ghep-anh-21.jpg
+Input Type: image
+Description: Một con hươu nhỏ đứng giữa lối mòn xanh mướt trong khu rừng rậm rạp với những tán cây xanh mướt và hoa tím điểm xuyết. Bức ảnh mang phong cách thiên nhiên tươi sáng, yên bình với tông màu xanh lá chủ đạo.
+----------------------------------------
+ID: 523d7bac-6839-5c6c-9a1c-b90087b9e6e1
+File Name: 91.jpg
+File Path: D:\retrive\image\91.jpg
+Input Type: image
+Description: Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng hình trụ và hình hộp chữ nhật khác nhau. Tất cả đều có màu trắng tối giản, phong cách hiện đại trên nền trắng sạch sẽ.
+----------------------------------------
+ID: 65eb00bb-f8e4-5c48-ae24-17c2f72eb5cc
+File Name: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+File Path: D:\retrive\image\1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+Input Type: image
+Description: Hình ảnh là một bục trưng bày hình tròn màu nâu nhạt/be đặt trên nền tối giản cùng tông màu. Phong cách thiết kế 3D hiện đại, sạch sẽ với ánh sáng mềm mại, phù hợp để làm phông nền quảng cáo sản phẩm.
+----------------------------------------
+ID: b968e39f-3dd1-5312-977d-4ad355ec8e39
+File Name: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+File Path: D:\retrive\image\green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+Input Type: image
+Description: Hình ảnh 3D tối giản với ba khối hình hộp chữ nhật màu xanh lá cây với các sắc độ đậm nhạt khác nhau, sắp xếp thành bục trưng bày. Toàn bộ khung cảnh nằm trên một nền màu xanh cốm nhạt, tạo phong cách hiện đại và sạch sẽ.
+----------------------------------------

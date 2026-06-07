@@ -1,0 +1,10 @@
+91.jpg norm: 46.0738
+Similarity 91.jpg vs 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg: 0.893613
+Similarity 91.jpg vs green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.911537
+Similarity 91.jpg vs background-ghep-anh-21.jpg: 0.659246
+1f26399e-08f2-429b-8ea7-5023b27ec899.jpg norm: 49.0296
+Similarity 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg vs green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.941590
+Similarity 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg vs background-ghep-anh-21.jpg: 0.609281
+green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg norm: 48.2089
+Similarity green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg vs background-ghep-anh-21.jpg: 0.632654
+background-ghep-anh-21.jpg norm: 47.5997

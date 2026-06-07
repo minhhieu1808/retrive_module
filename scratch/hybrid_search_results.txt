@@ -1,0 +1,84 @@
+Query: trắng
+  1. File: 91.jpg
+     Score: 0.4020 (Original: 0.2520, Boost: 0.1500)
+     Description: Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng hình trụ và hình hộp chữ nhật khác nhau. Tất cả đều có màu trắng tối giản, phong cách hiện đại trên nền trắng sạch sẽ.
+  2. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.2939 (Original: 0.2939, Boost: 0.0000)
+     Description: Hình ảnh là một bục trưng bày hình tròn màu nâu nhạt/be đặt trên nền tối giản cùng tông màu. Phong cách thiết kế 3D hiện đại, sạch sẽ với ánh sáng mềm mại, phù hợp để làm phông nền quảng cáo sản phẩm.
+  3. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.2886 (Original: 0.2886, Boost: 0.0000)
+     Description: Hình ảnh 3D tối giản với ba khối hình hộp chữ nhật màu xanh lá cây với các sắc độ đậm nhạt khác nhau, sắp xếp thành bục trưng bày. Toàn bộ khung cảnh nằm trên một nền màu xanh cốm nhạt, tạo phong cách hiện đại và sạch sẽ.
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.2418 (Original: 0.2418, Boost: 0.0000)
+     Description: Một con hươu nhỏ đứng giữa lối mòn xanh mướt trong khu rừng rậm rạp với những tán cây xanh mướt và hoa tím điểm xuyết. Bức ảnh mang phong cách thiên nhiên tươi sáng, yên bình với tông màu xanh lá chủ đạo.
+============================================================
+Query: màu trắng
+  1. File: 91.jpg
+     Score: 0.4079 (Original: 0.2579, Boost: 0.1500)
+     Description: Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng hình trụ và hình hộp chữ nhật khác nhau. Tất cả đều có màu trắng tối giản, phong cách hiện đại trên nền trắng sạch sẽ.
+  2. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.3841 (Original: 0.3091, Boost: 0.0750)
+     Description: Hình ảnh là một bục trưng bày hình tròn màu nâu nhạt/be đặt trên nền tối giản cùng tông màu. Phong cách thiết kế 3D hiện đại, sạch sẽ với ánh sáng mềm mại, phù hợp để làm phông nền quảng cáo sản phẩm.
+  3. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.3768 (Original: 0.3018, Boost: 0.0750)
+     Description: Hình ảnh 3D tối giản với ba khối hình hộp chữ nhật màu xanh lá cây với các sắc độ đậm nhạt khác nhau, sắp xếp thành bục trưng bày. Toàn bộ khung cảnh nằm trên một nền màu xanh cốm nhạt, tạo phong cách hiện đại và sạch sẽ.
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.3190 (Original: 0.2440, Boost: 0.0750)
+     Description: Một con hươu nhỏ đứng giữa lối mòn xanh mướt trong khu rừng rậm rạp với những tán cây xanh mướt và hoa tím điểm xuyết. Bức ảnh mang phong cách thiên nhiên tươi sáng, yên bình với tông màu xanh lá chủ đạo.
+============================================================
+Query: bục trắng
+  1. File: 91.jpg
+     Score: 0.4148 (Original: 0.2648, Boost: 0.1500)
+     Description: Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng hình trụ và hình hộp chữ nhật khác nhau. Tất cả đều có màu trắng tối giản, phong cách hiện đại trên nền trắng sạch sẽ.
+  2. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.4004 (Original: 0.3254, Boost: 0.0750)
+     Description: Hình ảnh là một bục trưng bày hình tròn màu nâu nhạt/be đặt trên nền tối giản cùng tông màu. Phong cách thiết kế 3D hiện đại, sạch sẽ với ánh sáng mềm mại, phù hợp để làm phông nền quảng cáo sản phẩm.
+  3. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.3849 (Original: 0.3099, Boost: 0.0750)
+     Description: Hình ảnh 3D tối giản với ba khối hình hộp chữ nhật màu xanh lá cây với các sắc độ đậm nhạt khác nhau, sắp xếp thành bục trưng bày. Toàn bộ khung cảnh nằm trên một nền màu xanh cốm nhạt, tạo phong cách hiện đại và sạch sẽ.
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.2511 (Original: 0.2511, Boost: 0.0000)
+     Description: Một con hươu nhỏ đứng giữa lối mòn xanh mướt trong khu rừng rậm rạp với những tán cây xanh mướt và hoa tím điểm xuyết. Bức ảnh mang phong cách thiên nhiên tươi sáng, yên bình với tông màu xanh lá chủ đạo.
+============================================================
+Query: bục trưng bày màu trắng
+  1. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.4867 (Original: 0.3667, Boost: 0.1200)
+     Description: Hình ảnh là một bục trưng bày hình tròn màu nâu nhạt/be đặt trên nền tối giản cùng tông màu. Phong cách thiết kế 3D hiện đại, sạch sẽ với ánh sáng mềm mại, phù hợp để làm phông nền quảng cáo sản phẩm.
+  2. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.4584 (Original: 0.3384, Boost: 0.1200)
+     Description: Hình ảnh 3D tối giản với ba khối hình hộp chữ nhật màu xanh lá cây với các sắc độ đậm nhạt khác nhau, sắp xếp thành bục trưng bày. Toàn bộ khung cảnh nằm trên một nền màu xanh cốm nhạt, tạo phong cách hiện đại và sạch sẽ.
+  3. File: 91.jpg
+     Score: 0.4221 (Original: 0.2721, Boost: 0.1500)
+     Description: Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng hình trụ và hình hộp chữ nhật khác nhau. Tất cả đều có màu trắng tối giản, phong cách hiện đại trên nền trắng sạch sẽ.
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.2786 (Original: 0.2486, Boost: 0.0300)
+     Description: Một con hươu nhỏ đứng giữa lối mòn xanh mướt trong khu rừng rậm rạp với những tán cây xanh mướt và hoa tím điểm xuyết. Bức ảnh mang phong cách thiên nhiên tươi sáng, yên bình với tông màu xanh lá chủ đạo.
+============================================================
+Query: bục tròn màu nâu
+  1. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.5095 (Original: 0.3595, Boost: 0.1500)
+     Description: Hình ảnh là một bục trưng bày hình tròn màu nâu nhạt/be đặt trên nền tối giản cùng tông màu. Phong cách thiết kế 3D hiện đại, sạch sẽ với ánh sáng mềm mại, phù hợp để làm phông nền quảng cáo sản phẩm.
+  2. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.4101 (Original: 0.3351, Boost: 0.0750)
+     Description: Hình ảnh 3D tối giản với ba khối hình hộp chữ nhật màu xanh lá cây với các sắc độ đậm nhạt khác nhau, sắp xếp thành bục trưng bày. Toàn bộ khung cảnh nằm trên một nền màu xanh cốm nhạt, tạo phong cách hiện đại và sạch sẽ.
+  3. File: 91.jpg
+     Score: 0.3446 (Original: 0.2696, Boost: 0.0750)
+     Description: Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng hình trụ và hình hộp chữ nhật khác nhau. Tất cả đều có màu trắng tối giản, phong cách hiện đại trên nền trắng sạch sẽ.
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.2906 (Original: 0.2531, Boost: 0.0375)
+     Description: Một con hươu nhỏ đứng giữa lối mòn xanh mướt trong khu rừng rậm rạp với những tán cây xanh mướt và hoa tím điểm xuyết. Bức ảnh mang phong cách thiên nhiên tươi sáng, yên bình với tông màu xanh lá chủ đạo.
+============================================================
+Query: podium
+  1. File: 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg
+     Score: 0.3538 (Original: 0.3538, Boost: 0.0000)
+     Description: Hình ảnh là một bục trưng bày hình tròn màu nâu nhạt/be đặt trên nền tối giản cùng tông màu. Phong cách thiết kế 3D hiện đại, sạch sẽ với ánh sáng mềm mại, phù hợp để làm phông nền quảng cáo sản phẩm.
+  2. File: green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg
+     Score: 0.3259 (Original: 0.3259, Boost: 0.0000)
+     Description: Hình ảnh 3D tối giản với ba khối hình hộp chữ nhật màu xanh lá cây với các sắc độ đậm nhạt khác nhau, sắp xếp thành bục trưng bày. Toàn bộ khung cảnh nằm trên một nền màu xanh cốm nhạt, tạo phong cách hiện đại và sạch sẽ.
+  3. File: 91.jpg
+     Score: 0.2979 (Original: 0.2979, Boost: 0.0000)
+     Description: Bộ sưu tập các bục trưng bày sản phẩm 3D với nhiều hình dáng hình trụ và hình hộp chữ nhật khác nhau. Tất cả đều có màu trắng tối giản, phong cách hiện đại trên nền trắng sạch sẽ.
+  4. File: background-ghep-anh-21.jpg
+     Score: 0.2646 (Original: 0.2646, Boost: 0.0000)
+     Description: Một con hươu nhỏ đứng giữa lối mòn xanh mướt trong khu rừng rậm rạp với những tán cây xanh mướt và hoa tím điểm xuyết. Bức ảnh mang phong cách thiên nhiên tươi sáng, yên bình với tông màu xanh lá chủ đạo.
+============================================================

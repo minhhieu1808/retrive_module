@@ -1,0 +1,36 @@
+Query: trắng
+  - 91.jpg: 0.5552
+  - 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg: 0.5313
+  - background-ghep-anh-21.jpg: 0.5242
+  - green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.5166
+----------------------------------------
+Query: màu trắng
+  - 91.jpg: 0.6556
+  - 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg: 0.6353
+  - green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.6211
+  - background-ghep-anh-21.jpg: 0.6091
+----------------------------------------
+Query: bục trắng
+  - 91.jpg: 0.6368
+  - 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg: 0.6124
+  - green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.5864
+  - background-ghep-anh-21.jpg: 0.5813
+----------------------------------------
+Query: bục trưng bày màu trắng
+  - 91.jpg: 0.8160
+  - 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg: 0.7959
+  - green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.7611
+  - background-ghep-anh-21.jpg: 0.7240
+----------------------------------------
+Query: bục tròn màu nâu
+  - 91.jpg: 0.7678
+  - 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg: 0.7541
+  - green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.7300
+  - background-ghep-anh-21.jpg: 0.7121
+----------------------------------------
+Query: podium
+  - 91.jpg: 0.2475
+  - 1f26399e-08f2-429b-8ea7-5023b27ec899.jpg: 0.2219
+  - green-pedestal-podium-product-display-stand-empty-space-stage-studio-background-3d-rendering.jpg: 0.1975
+  - background-ghep-anh-21.jpg: 0.1937
+----------------------------------------

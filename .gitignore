@@ -61,3 +61,5 @@ qdrant_db/
 # IDEs
 .vscode/
 .idea/
+
+image/
